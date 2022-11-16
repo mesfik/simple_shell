@@ -25,7 +25,7 @@ void sig_handler(int sig)
  */
 int execute(char **args, char **front)
 {
-	pid_t in_pid;
+	pid_t child_pid;
 	int status, flag = 0, ret = 0;
 	char *comand = args[0];
 
@@ -43,15 +43,15 @@ int execute(char **args, char **front)
 	}
 	else
 	{
-		in_pid = fork();
-		if (in_pid == -1)
+		child_pid = fork();
+		if (child_pid == -1)
 		{
 			if (flag)
 				free(comand);
 			perror("Error initial:");
 			return (1);
 		}
-		if (in_pid == 0)
+		if (child_pid == 0)
 		{
 			execve(comand, args, environ);
 			if (errno == EACCES)
