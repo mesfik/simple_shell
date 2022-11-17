@@ -19,7 +19,7 @@ int open_file_path(char *file_path)
 	if (!str)
 		return (127);
 
-	ln = _strlen(name) + _strlen(str) + _strlen(args[0]) + 16;
+	ln = _strlen(name) + _strlen(str) + _strlen(file_path) + 16;
 	error = malloc(sizeof(char) * (ln + 1));
 
 	if (!error)
@@ -63,7 +63,7 @@ int proc_file_commands(char *file_path, int *exe_ret)
 	file = open(file_path, O_RDONLY);
 	if (file == -1)
 	{
-		*exe_ret = cant_open(file_path);
+		*exe_ret = open_file_path(file_path);
 		return (*exe_ret);
 	}
 	line = malloc(sizeof(char) * old_size);
