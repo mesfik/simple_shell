@@ -106,6 +106,7 @@ int run_args(char **args, char **front, int *exe_ret)
 {
 	int ret, i;
 	int (*builtin)(char **args, char **front);
+	builtin = get_builtin(args[0]);
 
 	if (builtin)
 	{

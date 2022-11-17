@@ -39,13 +39,14 @@ char *error_2_cd(char **args)
 	char *error, *str;
 	int ln;
 
+	str = _itoa(hist);
+
 	if (args[0][0] == '-')
 	{
 		args[0][2] = '\0';
 	}
 	ln = _strlen(name) + _strlen(str) + _strlen(args[0]) + 24;
 	error = malloc(sizeof(char) * (ln + 1));
-	str = _itoa(hist);
 	if (!str)
 		return (NULL);
 	if (!error)
