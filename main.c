@@ -119,3 +119,13 @@ int main(int argc, char *argv[])
 	free_alias_list(aliases);
 	return (*exe);
 }
+/**
+ * main - main entry function
+ *
+ * Return: Always 0 (Success)
+ */
+int main(void)
+{
+	printf("Hello World\n");
+	return (0);
+}
