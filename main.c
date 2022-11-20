@@ -1,122 +1,48 @@
 #include "shell.h"
-void sig_handler(int sig);
-int execute(char **args, char **front);
-
 /**
- * sig_handler - a new prompt up on signal
- *
- * @sig: signal
+ * main - main loop of shell
+ * Return: 0 on success
  */
-void sig_handler(int sig)
+int main(void)
 {
-	char *Nprom = "\n$ ";
+	char *line, *path, *fullpath;
+	char **tokens;
+	int flag, builtin_status, child_status;
+	struct stat buf;
 
-	(void)sig;
-	signal(SIGINT, sig_handler);
-	write(STDIN_FILENO, Nprom, 3);
-}
-/**
- * execute - initial execution function
- *
- * @args: argument of variables
- * @front: pointer to the argument
- *
- * Return: the exit value of the last comand
- */
-int execute(char **args, char **front)
-{
-	pid_t child_pid;
-	int status, flag = 0, ret = 0;
-	char *comand = args[0];
-
-	if (comand[0] != '/' && comand[0] != '.')
+	while (TRUE)
 	{
-		flag = 1;
-		comand = get_location(comand);
-	}
-	if (!comand || (access(comand, F_OK)) == -1)
-	{
-		if (errno == EACCES)
-			ret = (create_error(args, 126));
+		prompt(STDIN_FILENO, buf);
+		line = _getline(stdin);
+		if (_strcmp(line, "\n", 1) == 0)
+		{
+			free(line);
+			continue;
+		}
+		tokens = tokenizer(line);
+		if (tokens[0] == NULL)
+			continue;
+		builtin_status = builtin_execute(tokens);
+		if (builtin_status == 0 || builtin_status == -1)
+		{
+			free(tokens);
+			free(line);
+		}
+		if (builtin_status == 0)
+			continue;
+		if (builtin_status == -1)
+			_exit(EXIT_SUCCESS);
+		flag = 0;
+		path = _getenv("PATH");
+		fullpath = _which(tokens[0], fullpath, path);
+		if (fullpath == NULL)
+			fullpath = tokens[0];
 		else
-			ret = (create_error(args, 127));
+			flag = 1;
+		child_status = child(fullpath, tokens);
+		if (child_status == -1)
+			errors(2);
+		free_all(tokens, path, line, fullpath, flag);
 	}
-	else
-	{
-		child_pid = fork();
-		if (child_pid == -1)
-		{
-			if (flag)
-				free(comand);
-			perror("Error initial:");
-			return (1);
-		}
-		if (child_pid == 0)
-		{
-			execve(comand, args, environ);
-			if (errno == EACCES)
-				ret = (create_error(args, 126));
-			free_env();
-			free_args(args, front);
-			free_alias_list(aliases);
-			_exit(ret);
-		}
-		else
-		{
-			wait(&status);
-			ret = WEXITSTATUS(status);
-		}
-	}
-	if (flag)
-		free(comand);
-	return (ret);
-}
-/**
- * main - UNIX comand interprator
- *
- * @argc: argument count
- * @argv: argument variable
- *
- * Return: executed comand
- */
-int main(int argc, char *argv[])
-{
-	int ret = 0, n;
-	int *exe = &n;
-	char *prompt = "$ ", *Nline = "\n";
-
-	name = argv[0];
-	hist = 1;
-	aliases = NULL;
-	signal(SIGINT, sig_handler);
-
-	*exe = 0;
-	environ = _copyenv();
-	if (!environ)
-		exit(-100);
-
-	if (argc != 1)
-	{
-		ret = proc_file_commands(argv[1], exe);
-		free_env();
-		free_alias_list(aliases);
-		return (*exe);
-	}
-	while (1)
-	{
-		write(STDOUT_FILENO, prompt, 2);
-		ret = handle_args(exe);
-		if (ret == END_OF_FILE || ret == EXIT)
-		{
-			if (ret == END_OF_FILE)
-				write(STDOUT_FILENO, Nline, 1);
-			free_env();
-			free_alias_list(aliases);
-			exit(*exe);
-		}
-	}
-	free_env();
-	free_alias_list(aliases);
-	printf("%d\n", *exe);
 	return (0);
 }

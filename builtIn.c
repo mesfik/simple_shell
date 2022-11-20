@@ -1,153 +1,93 @@
 #include "shell.h"
 
-int shellby_alias(char **args, char __attribute__((__unused__)) **front);
-void set_alias(char *var_name, char *value);
-void print_alias(alias_t *alias);
 /**
- * set_alias - function set existing alias
- *
- * @var_name: name of the alias
- * @value: value of the name alias
- *
- * Return: Nothing
+ * builtin_execute - executes the built in functions
+ * @tokens: arguments being passed
+ * Return: tokens
  */
-void set_alias(char *var_name, char *value)
+int builtin_execute(char **tokens)
 {
-	alias_t *temp = aliases;
-	int ln, i, j;
-	char *Nvalue;
+	int status;
+	unsigned int length;
+	unsigned int num;
+	unsigned int i;
 
-	*value = '\0';
-	value++;
-	ln = _strlen(value) - _strspn(value, "'\"");
-	Nvalue = malloc(sizeof(char) * (ln + 1));
-	if (!Nvalue)
-		return;
-	for (i = 0, j = 0; value[i]; i++)
+	built_s builtin[] = {
+		{"exit", shell_exit},
+		{"env", shell_env},
+		{"cd", my_chdir},
+		{NULL, NULL}
+	};
+	if (tokens[0] == NULL)
+		return (1);
+	length = _strlen(tokens[0]);
+
+	num = shell_num_builtins(builtin);
+	for (i = 0; i < num; i++)
 	{
-		if (value[i] != '\'' && value[i] != '"')
-			Nvalue[j++] = value[i];
-	}
-	Nvalue[j] = '\0';
-	while (temp)
-	{
-		if (_strcmp(var_name, temp->name) == 0)
+		if (_strcmp(tokens[0], builtin[i].name, length) == 0)
 		{
-			free(temp->value);
-			temp->value = Nvalue;
-			break;
+			status = (builtin[i].p)(tokens);
+			return (status);
 		}
-		temp = temp->next;
 	}
-	if (!temp)
-		add_alias_end(&aliases, var_name, Nvalue);
+	return (1);
 }
 /**
- * shellby_alias - function prints aliases
- *
- * @args: argument of an array
- * @front: pointer to the argument
- *
- * Return: 0 if success or -1
+ * shell_num_builtins - this check num built-ins
+ * @builtin: takes the builtin to be counted
+ * Return: num of built-ins
  */
-int shellby_alias(char **args, char __attribute__((__unused__)) **front)
-{
-	alias_t *temp = aliases;
-	int k = 0, ret = 0;
-	char *value;
 
-	if (!args[0])
-	{
-		while (temp)
-		{
-			print_alias(temp);
-			temp = temp->next;
-		}
-		return (ret);
-	}
-	while (args[k])
-	{
-		temp = aliases;
-		value = _strchr(args[k], '=');
-		if (!value)
-		{
-			while (temp)
-			{
-				if (_strcmp(args[k], temp->name) == 0)
-				{
-					print_alias(temp);
-					break;
-				}
-				temp = temp->next;
-			}
-			if (!temp)
-				ret = create_error(args + k, 1);
-		}
-		else
-			set_alias(args[k], value);
-		k++;
-	}
-	return (ret);
+int shell_num_builtins(built_s builtin[])
+{
+	unsigned int i;
+
+	i = 0;
+	while (builtin[i].name != NULL)
+		i++;
+	return (i);
+}
+#include "shell.h"
+/**
+ * shell_exit - exits the shell
+ * @cmd: arguments being passed
+ * Return: void
+ */
+int shell_exit(char **cmd __attribute__((unused)))
+{
+	return (-1);
 }
 /**
- * print_alias - function that print alias
- *
- * @alias: alias pointer
- *
- * Return: Nothing
+ * shell_env - prints environment
+ * @cmd: arguments being passed
+ * Return: void
  */
-void print_alias(alias_t *alias)
+int shell_env(char **cmd __attribute__((unused)))
 {
-	char *alias_string;
-	int ln = _strlen(alias->name) + _strlen(alias->value) + 4;
+	unsigned int i;
 
-	alias_string = malloc(sizeof(char) * (ln + 1));
-	if (!alias_string)
-		return;
-	_strcpy(alias_string, alias->name);
-	_strcat(alias_string, "='");
-	_strcat(alias_string, alias->value);
-	_strcat(alias_string, "'\n");
-
-	write(STDOUT_FILENO, alias_string, ln);
-	free(alias_string);
+	i = 0;
+	while (environ[i] != NULL)
+	{
+		write(STDOUT_FILENO, environ[i], _strlen(environ[i]));
+		write(STDOUT_FILENO, "\n", 1);
+		i++;
+	}
+	return (0);
 }
 /**
- * replace_aliases - function to replace matching aliases
- *
- * @args: argument variable pointer
- *
- * Return: pointer to the argument
+ * my_chdir - builtin function
+ * @cmd: command
+ * Return: void
  */
-char **replace_aliases(char **args)
+int my_chdir(char **cmd)
 {
-	alias_t *temp;
-	int i;
-	char *Nvalue;
+	char cwd[1024];
 
-	if (_strcmp(args[0], "alias") == 0)
-		return (args);
-	for (i = 0; args[i]; i++)
-	{
-		temp = aliases;
-		while (temp)
-		{
-			if (_strcmp(args[i], temp->name) == 0)
-			{
-				Nvalue = malloc(sizeof(char) * (_strlen(temp->value) + 1));
-				if (!Nvalue)
-				{
-					free_args(args, args);
-					return (NULL);
-				}
-				_strcpy(Nvalue, temp->value);
-				free(args[i]);
-				args[i] = Nvalue;
-				i--;
-				break;
-			}
-			temp = temp->next;
-		}
-	}
-	return (args);
+	getcwd(cwd, sizeof(cwd));
+	if (!strcmp(cmd[0], cwd))
+		if (chdir(cmd[1]) == -1)
+			perror("Error");
+	return (0);
 }

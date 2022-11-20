@@ -1,120 +1,51 @@
 #include "shell.h"
 
-int open_file_path(char *file_path);
-int proc_file_commands(char *file_path, int *exe_ret);
-
 /**
- * open_file_path - function that open file path
- *
- * @file_path: path of the file
- *
- * Return: 127
+ * _which - searches directories in PATH variable for command
+ * @command: to search for
+ * @fullpath: full path of command to execute
+ * @path: full PATH variable
+ * Return: pointer to full_path
  */
-int open_file_path(char *file_path)
+char *_which(char *command, char *fullpath, char *path)
 {
-	char *error, *str;
-	int ln;
+	unsigned int command_length, path_length, original_path_length;
+	char *path_copy, *token;
 
-	str = _itoa(hist);
-	if (!str)
-		return (127);
-
-	ln = _strlen(name) + _strlen(str) + _strlen(file_path) + 16;
-	error = malloc(sizeof(char) * (ln + 1));
-
-	if (!error)
+	command_length = _strlen(command);
+	original_path_length = _strlen(path);
+	path_copy = malloc(sizeof(char) * original_path_length + 1);
+	if (path_copy == NULL)
 	{
-		free(str);
-		return (127);
+		errors(3);
+		return (NULL);
 	}
-	_strcpy(error, name);
-	_strcat(error, ": ");
-	_strcat(error, str);
-	_strcat(error, ": Can't open ");
-	_strcat(error, file_path);
-	_strcat(error, "\n");
-
-	free(str);
-	write(STDERR_FILENO, error, ln);
-	free(error);
-	return (127);
-}
-/**
- * proc_file_commands - Takes a file and attempts to run the commands stored
- *  within.
- *
- *  @file_path: Path to the file.
- *  @exe_ret: Return value of the last executed command.
- *
- *  Return: If file couldn't be opened - 127.
- *          If malloc fails - -1.
- *          Otherwise the return value of the last command ran.
- */
-int proc_file_commands(char *file_path, int *exe_ret)
-{
-	ssize_t file, b_read, i;
-	unsigned int line_size = 0;
-	unsigned int old_size = 120;
-	char *line, **args, **front;
-	char buffer[120];
-	int ret;
-
-	hist = 0;
-	file = open(file_path, O_RDONLY);
-	if (file == -1)
+	_strcpy(path_copy, path);
+	token = strtok(path_copy, ":");
+	if (token == NULL)
+		token = strtok(NULL, ":");
+	while (token != NULL)
 	{
-		*exe_ret = open_file_path(file_path);
-		return (*exe_ret);
-	}
-	line = malloc(sizeof(char) * old_size);
-	if (!line)
-		return (-1);
-	do {
-		b_read = read(file, buffer, 119);
-		if (b_read == 0 && line_size == 0)
-			return (*exe_ret);
-		buffer[b_read] = '\0';
-		line_size += b_read;
-		line = _realloc(line, old_size, line_size);
-		_strcat(line, buffer);
-		old_size = line_size;
-	} while (b_read);
-	for (i = 0; line[i] == '\n'; i++)
-		line[i] = ' ';
-	for (; i < line_size; i++)
-	{
-		if (line[i] == '\n')
+		path_length = _strlen(token);
+		fullpath = malloc(sizeof(char) * (path_length + command_length) + 2);
+		if (fullpath == NULL)
 		{
-			line[i] = ';';
-			for (i += 1; i < line_size && line[i] == '\n'; i++)
-				line[i] = ' ';
+			errors(3);
+			return (NULL);
 		}
-	}
-	variable_replacement(&line, exe_ret);
-	handle_line(&line, line_size);
-	args = _strtok(line, " ");
-	free(line);
-	if (!args)
-		return (0);
-	if (check_args(args) != 0)
-	{
-		*exe_ret = 2;
-		free_args(args, args);
-		return (*exe_ret);
-	}
-	front = args;
-	for (i = 0; args[i]; i++)
-	{
-		if (_strncmp(args[i], ";", 1) == 0)
+		_strcpy(fullpath, token);
+		fullpath[path_length] = '/';
+		_strcpy(fullpath + path_length + 1, command);
+		fullpath[path_length + command_length + 1] = '\0';
+		if (access(fullpath, X_OK) != 0)
 		{
-			free(args[i]);
-			args[i] = NULL;
-			ret = call_args(args, front, exe_ret);
-			args = &args[++i];
-			i = 0;
+			free(fullpath);
+			fullpath = NULL;
+			token = strtok(NULL, ":");
 		}
+		else
+			break;
 	}
-	ret = call_args(args, front, exe_ret);
-	free(front);
-	return (ret);
+	free(path_copy);
+	return (fullpath);
 }
